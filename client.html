@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+	<head>
+		<meta charset="UTF-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Move the squares!</title>
+		<style>
+			body {
+				padding: 0;
+				margin: 0;
+			}
+
+			.game {
+				position: fixed;
+				top: 0%;
+				left: 0%;
+				min-width: 100%;
+				max-width: 100%;
+				min-height: 100%;
+				max-height: 100%;
+			}
+
+			.box {
+				position: absolute;
+				width: 64px;
+				height: 64px;
+				border: 1px solid black;
+			}
+
+			.box#box_ply1 {
+				left: 0%;
+				background-color: blue;
+			}
+
+			.box#box_ply2 {
+				left: 94.5vw;
+				background-color: red;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="game">
+			<div class="box" id="box_ply1"></div>
+			<div class="box" id="box_ply2"></div>
+		</div>
+		<script>
+			const ws = new WebSocket("ws://localhost:8080");
+			const box1 = document.querySelector("#box_ply1");
+			const box2 = document.querySelector("#box_ply2");
+
+			var box;
+			var boxEnemy;
+			var started;
+			var canPlay;
+			var connection;
+
+			ws.onopen = () => {
+				console.log("WebSocket open");
+			};
+
+			ws.onmessage = (msg) => {
+				if (msg.data === "0" || msg.data === "1") {
+					if (msg.data === "0") {
+						box = box1;
+						boxEnemy = box2;
+						connection = 0;
+					} else {
+						box = box2;
+						boxEnemy = box1;
+						connection = 1;
+					}
+					started = true;
+					//applying logic
+					var mouse = 0;
+					var CurrentWindow = window;
+					var e;
+					var posX;
+					var posY;
+
+					document.addEventListener("mousemove", () => {
+						posX = window.event.clientX;
+						posY = window.event.clientY;
+					});
+
+					function mouseDown(event) {
+						let funcEvent = event;
+						if (mouse === 0) {
+							mouse = setInterval(() => {
+								ws.send([[posX, posY], connection]);
+								box.setAttribute("style", `position: absolute; top: ${posY}px; left: ${posX}px`);
+							}, 100);
+						}
+					}
+
+					function mouseUp(event) {
+						if (mouse != 0) {
+							clearInterval(mouse);
+							mouse = 0;
+						}
+					}
+
+					box.addEventListener("mousedown", mouseDown);
+					document.addEventListener("mouseup", mouseUp);
+				}
+				if (started) {
+					if (canPlay) {
+						msg = JSON.parse("[" + msg.data + "]");
+						msg = msg[0];
+						if (msg[2] !== connection && msg[2] !== String(connection)) {
+							boxEnemy.setAttribute("style", `position: absolute; top: ${msg[1]}px; left: ${msg[0]}px`);
+						}
+					} else {
+						canPlay = true;
+					}
+				}
+			};
+		</script>
+	</body>
+</html>
